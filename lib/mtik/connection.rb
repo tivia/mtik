@@ -248,6 +248,10 @@ class MTik::Connection
       end
       if sel[0].length == 1
         @data += recv(8192)
+	raise MTik::Error.new(                                                                                                                                                                                     
+        ¦ "Connection reset by peer while awaiting data with #{outstanding} pending " +                                                                                                                            
+        ¦ "requests: '" + @requests.values.map{|req| req.command}.join("' ,'") + "'"
+	) if @data.empty?      
       elsif sel[2].length == 1
         raise MTik::Error.new(
           "I/O (select) error while awaiting data with #{outstanding} pending " +
