@@ -104,7 +104,7 @@ class MTik::Connection
     # Try using the the post-6.43 login API; on older routers this still initiates
     # a regular challenge-response cycle.
     if @use_ssl || @unencrypted_plaintext
-      warn("SENDING PLAINTEXT PASSWORD OVER UNENCRYPTED CONNECTION") unless @use_ssl
+      #warn("SENDING PLAINTEXT PASSWORD OVER UNENCRYPTED CONNECTION") unless @use_ssl
       reply = get_reply('/login',["=name=#{@user}","=password=#{@pass}"])
       if reply.length == 1 && reply[0].length == 2 && reply[0].key?('!done')
         v_6_43_login_successful = true
@@ -116,8 +116,6 @@ class MTik::Connection
 
     unless v_6_43_login_successful
       #require 'pry'; binding.pry
-      p reply
-
       ## Make sure the reply has the info we expect for challenge-response authentication:
       if reply.length != 1 || reply[0].length != 3 || !reply[0].key?('ret')
         raise MTik::Error.new("Login failed: unexpected reply to login attempt.")
