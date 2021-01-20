@@ -115,6 +115,9 @@ class MTik::Connection
     end
 
     unless v_6_43_login_successful
+      #require 'pry'; binding.pry
+      p reply
+
       ## Make sure the reply has the info we expect for challenge-response authentication:
       if reply.length != 1 || reply[0].length != 3 || !reply[0].key?('ret')
         raise MTik::Error.new("Login failed: unexpected reply to login attempt.")
@@ -149,21 +152,22 @@ class MTik::Connection
   ## Connect to the device
   def connect
     return unless @sock.nil?
+    @sock = TCPSocket.new(@host, @port)
     ## TODO: Perhaps catch more errors
-    begin
-      addr = Socket.getaddrinfo(@host, nil)
-      @sock = Socket.new(Socket.const_get(addr[0][0]), Socket::SOCK_STREAM, 0)
+    #begin
+      #addr = Socket.getaddrinfo(@host, nil)
+      #@sock = Socket.new(Socket.const_get(addr[0][0]), Socket::SOCK_STREAM, 0)
 
-      begin
-        @sock.connect_nonblock(Socket.pack_sockaddr_in(@port, addr[0][3]))
-      rescue Errno::EINPROGRESS
-        ready = IO.select([@sock], [@sock], [], @conn_timeout)
-        if ready
-          @sock
-        else
-          raise Errno::ETIMEDOUT
-      end
-    end
+      #begin
+        #@sock.connect_nonblock(Socket.pack_sockaddr_in(@port, addr[0][3]))
+      #rescue Errno::EINPROGRESS
+        #ready = IO.select([@sock], [@sock], [], @conn_timeout)
+        #if ready
+          #@sock
+        #else
+          #raise Errno::ETIMEDOUT
+      #end
+    #end
 
     connect_ssl(@sock) if @use_ssl
 
@@ -171,7 +175,6 @@ class MTik::Connection
            Errno::EHOSTUNREACH => e
       @sock = nil
       raise e ## Re-raise the exception
-    end
   end
 
   def connect_ssl(sock)
@@ -239,25 +242,26 @@ class MTik::Connection
       oldlen = @data.length
       ## Read some more data IF any is available:
       sock = @ssl_sock || @sock
-      sel = IO.select([sock],nil,[sock], @cmd_timeout)
-      if sel.nil?
-        raise MTik::TimeoutError.new(
-          "Time-out while awaiting data with #{outstanding} pending " +
-          "requests: '" + @requests.values.map{|req| req.command}.join("' ,'") + "'"
-        )
-      end
-      if sel[0].length == 1
-        @data += recv(8192)
-	raise MTik::Error.new(
-	  "Connection reset by peer while awaiting data with #{outstanding} pending " +
-	  "requests: '" + @requests.values.map{|req| req.command}.join("' ,'") + "'"
-	) if @data.empty?      
-      elsif sel[2].length == 1
-        raise MTik::Error.new(
-          "I/O (select) error while awaiting data with #{outstanding} pending " +
-          "requests: '" + @requests.values.map{|req| req.command}.join("' ,'") + "'"
-        )
-      end
+      @data += recv(8192)
+      #sel = IO.select([sock],nil,[sock], @cmd_timeout)
+      #if sel.nil?
+        #raise MTik::TimeoutError.new(
+          #"Time-out while awaiting data with #{outstanding} pending " +
+          #"requests: '" + @requests.values.map{|req| req.command}.join("' ,'") + "'"
+        #)
+      #end
+      #if sel[0].length == 1
+        #@data += recv(8192)
+	#raise MTik::Error.new(
+		#"Connection reset by peer while awaiting data with #{outstanding} pending " +
+		#"requests: '" + @requests.values.map{|req| req.command}.join("' ,'") + "'"
+	#) if @data.empty?      
+      #elsif sel[2].length == 1
+        #raise MTik::Error.new(
+          #"I/O (select) error while awaiting data with #{outstanding} pending " +
+          #"requests: '" + @requests.values.map{|req| req.command}.join("' ,'") + "'"
+        #)
+      #end
     end  ## read-data loop
   end
 
