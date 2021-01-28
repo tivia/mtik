@@ -109,13 +109,17 @@ class MTik::Connection
       if reply.length == 1 && reply[0].length == 2 && reply[0].key?('!done')
         v_6_43_login_successful = true
       end
+      
+      if reply.length >= 1 && reply[0].key?('!trap')
+        raise MTik::Error.new("Login failed: " + (reply[0].key?('message') ? reply[0]['message'] : 'Unknown error.'))
+      end
     else
       ## Just send first /login command to obtain the challenge, if not using SSL
       reply = get_reply('/login')
     end
 
     unless v_6_43_login_successful
-      #require 'pry'; binding.pry
+
       ## Make sure the reply has the info we expect for challenge-response authentication:
       if reply.length != 1 || reply[0].length != 3 || !reply[0].key?('ret')
         raise MTik::Error.new("Login failed: unexpected reply to login attempt.")
