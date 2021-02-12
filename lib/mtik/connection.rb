@@ -40,6 +40,7 @@ class MTik::Connection
   require 'socket'
   require 'digest/md5'
   require 'openssl'
+  require 'async'
 
   ## Initialize/construct the new _MTik_ object.  One or more
   ## key/value pair style arguments must be specified. The one
@@ -72,9 +73,13 @@ class MTik::Connection
     @data                  = ''
     @parsing               = false  ## Recursion flag
     @os_version            = nil
+    @task                  = Async::Task.current if Async::Task.current?
 
     ## Initiate connection and immediately login to device:
     login
+  rescue MTik::Error
+    close if connected?
+    raise
   end
 
   ## Return the number of currently outstanding requests
@@ -154,7 +159,19 @@ class MTik::Connection
   ## Connect to the device
   def connect
     return unless @sock.nil?
-    @sock = TCPSocket.new(@host, @port)
+    
+    if @conn_timeout && defined?(@task)
+      begin
+        @task.with_timeout(@conn_timeout) do
+          @sock = TCPSocket.new(@host, @port)
+        end
+      rescue Async::TimeoutError
+        raise Errno::ETIMEDOUT
+      end
+    else
+        @sock = TCPSocket.new(@host, @port)
+    end
+
     ## TODO: Perhaps catch more errors
     #begin
       #addr = Socket.getaddrinfo(@host, nil)
@@ -200,7 +217,11 @@ class MTik::Connection
     oldlen = -1
     while true ## read-data loop
       if @data.length == oldlen
-        sleep(1)  ## Wait for some more data
+        if defined?(@task)
+          @task.sleep(1) ## Wait for some more data
+        else
+          sleep(1) ## Wait for some more data
+        end
       else
         while true  ## word parsing loop
           bytes, word = get_tikword(@data)
@@ -244,7 +265,9 @@ class MTik::Connection
       oldlen = @data.length
       ## Read some more data IF any is available:
       sock = @ssl_sock || @sock
+
       @data += recv(8192)
+
       #sel = IO.select([sock],nil,[sock], @cmd_timeout)
       #if sel.nil?
         #raise MTik::TimeoutError.new(
@@ -297,8 +320,25 @@ class MTik::Connection
     @parsing = true
     begin
       ## Fetch a sentence:
-      sentence = get_sentence  ## This call must be ATOMIC or re-entrant safety fails
+      sentence = nil
 
+      begin
+        if @cmd_timeout && defined?(@task)
+          @task.with_timeout(@cmd_timeout) do
+            sentence = get_sentence  ## This call must be ATOMIC or re-entrant safety fails
+          end
+        else
+          sentence = get_sentence  ## This call must be ATOMIC or re-entrant safety fails
+        end
+      rescue Async::TimeoutError
+        @sock.close
+        raise MTik::TimeoutError.new(
+          "Time-out while awaiting data with #{outstanding} pending " +
+          "requests: '" + @requests.values.map{|req| req.command}.join("' ,'") + "'"
+        )
+      end
+     
+      #raise MTik::Error.new("Login failed: " + (reply[0].key?('message') ? reply[0]['message'] : 'Unknown error.'))
       ## Check for '!fatal' before checking for a tag--'!fatal'
       ## is never(???) tagged:
       if sentence.key?('!fatal')

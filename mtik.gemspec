@@ -28,5 +28,8 @@ Gem::Specification.new do |spec|
     'lib/mtik/request.rb',
     'lib/mtik/timeouterror.rb'
   ]
+  spec.add_runtime_dependency 'async'
+
+
   spec.executables = [ 'tikcli', 'tikcommand', 'tikfetch' ]
 end
