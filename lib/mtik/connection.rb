@@ -331,7 +331,7 @@ class MTik::Connection
           sentence = get_sentence  ## This call must be ATOMIC or re-entrant safety fails
         end
       rescue Async::TimeoutError
-        @sock.close
+        close
         raise MTik::TimeoutError.new(
           "Time-out while awaiting data with #{outstanding} pending " +
           "requests: '" + @requests.values.map{|req| req.command}.join("' ,'") + "'"
