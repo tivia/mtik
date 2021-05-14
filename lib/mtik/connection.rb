@@ -229,7 +229,7 @@ class MTik::Connection
             ## Add word to sentence
             m = /^=?([^=]+)=(.*)$/.match(word)
             unless m.nil?
-              sentence[m[1]] = m[2].decode_mk
+              sentence[m[1]] = m[2].frozen? ? m[2] : m[2].force_encoding('iso-8859-1').encode('utf-8')
             else
               sentence[word] = nil
             end
