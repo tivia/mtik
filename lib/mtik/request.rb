@@ -270,5 +270,8 @@ class MTik::Request < Array
     return true
   end
 
+  def push(arg)
+    super(arg.encode_mk)
+  end
 end
 

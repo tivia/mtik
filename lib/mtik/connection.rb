@@ -229,7 +229,7 @@ class MTik::Connection
             ## Add word to sentence
             m = /^=?([^=]+)=(.*)$/.match(word)
             unless m.nil?
-              sentence[m[1]] = m[2]
+              sentence[m[1]] = m[2].decode_mk
             else
               sentence[word] = nil
             end

@@ -1,3 +1,13 @@
+class String
+  def encode_mk
+    frozen? ? self : force_encoding('utf-8').encode('iso-8859-1')
+  end
+
+  def decode_mk
+    frozen? ? self : force_encoding('iso-8859-1').encode('utf-8')
+  end
+end
+
 ############################################################################
 ## A Ruby library implementing the Ruby MikroTik API
 ############################################################################
