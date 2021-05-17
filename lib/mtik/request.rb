@@ -271,7 +271,6 @@ class MTik::Request < Array
   end
 
   def push(arg)
-    super(arg.frozen? ? arg : arg.force_encoding('utf-8').encode('iso-8859-1'))
+    super(arg.dup.force_encoding('utf-8').encode('iso-8859-1'))
   end
 end
-
